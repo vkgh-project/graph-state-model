@@ -444,32 +444,38 @@
                         id: i,
                         x: Math.random() * 800 + 100,
                         y: Math.random() * 600 + 100,
-                        stayCosts: [] // Will be filled per state
+                        stayCosts: []
                     });
                 }
             }
 
-            // FR-SM-002, FR-SM-004, FR-SM-005, FR-SM-006: Generate edges
+            // FR-SM-002, FR-SM-004, FR-SM-005, FR-SM-006: Generate edges with timeout protection
             generateEdges() {
                 this.edges = [];
                 const adjacencyMatrix = Array(this.config.numNodes)
                     .fill()
                     .map(() => Array(this.config.numNodes).fill(false));
 
-                // Assign edge count to each node (FR-SM-004)
+                // Maximum possible edges: (n * (n-1)) / 2 for undirected graph
+                const maxPossibleEdges = (this.config.numNodes * (this.config.numNodes - 1)) / 2;
+
+                // Generate edge counts for each node
                 const edgeCounts = this.nodes.map(() => 
                     Math.floor(Math.random() * 
                         (this.config.maxEdges - this.config.minEdges + 1)) + 
                         this.config.minEdges
                 );
 
-                // Create edges while respecting FR-SM-006 (no duplicate edges)
+                // Create edges with maximum attempts to prevent infinite loops
                 for (let nodeId = 0; nodeId < this.config.numNodes; nodeId++) {
                     let edgeCount = 0;
                     const targetCount = edgeCounts[nodeId];
+                    let attempts = 0;
+                    const maxAttempts = 1000; // Prevent infinite loops
 
-                    while (edgeCount < targetCount) {
+                    while (edgeCount < targetCount && attempts < maxAttempts) {
                         const targetNode = Math.floor(Math.random() * this.config.numNodes);
+                        attempts++;
 
                         if (targetNode !== nodeId && 
                             !adjacencyMatrix[nodeId][targetNode] && 
@@ -482,7 +488,7 @@
                                 id: this.edges.length,
                                 from: nodeId,
                                 to: targetNode,
-                                movementCosts: [] // Will be filled per state
+                                movementCosts: []
                             });
 
                             edgeCount++;
@@ -747,12 +753,17 @@
                 return;
             }
 
-            model = new GraphStateModel(config);
-            model.generateGraph();
+            try {
+                model = new GraphStateModel(config);
+                model.generateGraph();
 
-            updateUI();
-            visualizer.draw(model);
-            showMessage('Graph generated successfully!', 'success');
+                updateUI();
+                visualizer.draw(model);
+                showMessage('Graph generated successfully!', 'success');
+            } catch (error) {
+                showMessage('Error generating graph: ' + error.message, 'error');
+                console.error(error);
+            }
         }
 
         function updateUI() {

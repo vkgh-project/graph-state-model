@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph State Model System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 1400px;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-right: 20px;
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .sidebar h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .config-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .config-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .config-item label {
+            font-size: 13px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .config-item input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: border-color 0.3s;
+        }
+
+        .config-item input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .range-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .range-inputs input {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        button {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .state-navigation {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .state-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .state-buttons button {
+            padding: 10px 12px;
+            font-size: 12px;
+        }
+
+        .state-display {
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .state-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .state-slider::-webkit-slider-thumb {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .state-slider::-webkit-slider-thumb:hover {
+            background: #5568d3;
+        }
+
+        .state-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+            transition: background 0.3s;
+        }
+
+        .state-slider::-moz-range-thumb:hover {
+            background: #5568d3;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #canvas {
+            flex: 1;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+            min-height: 500px;
+            display: block;
+        }
+
+        .info-panel {
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .info-panel h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            font-size: 13px;
+        }
+
+        .info-item {
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-label {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .error-message {
+            padding: 12px;
+            background: #fee;
+            color: #c33;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            border-left: 4px solid #c33;
+        }
+
+        .success-message {
+            padding: 12px;
+            background: #efe;
+            color: #3c3;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            border-left: 4px solid #3c3;
+        }
+
+        @media (max-width: 1000px) {
+            .container {
+                grid-template-columns: 1fr;
+                max-height: none;
+            }
+
+            .sidebar {
+                border-right: none;
+                border-bottom: 2px solid #e0e0e0;
+                padding-right: 0;
+                padding-bottom: 20px;
+            }
+
+            .info-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+
+        .node-legend {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            padding: 6px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .node-legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+        }
+
+        .legend-container {
+            display: flex;
+            gap: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            font-size: 12px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-node {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #667eea;
+        }
+
+        .legend-edge {
+            width: 20px;
+            height: 2px;
+            background: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Configuration -->
+        <div class="sidebar">
+            <h2>Configuration</h2>
+
+            <div id="messageContainer"></div>
+
+            <div class="config-section">
+                <div class="config-item">
+                    <label for="numNodes">Number of Nodes</label>
+                    <input type="number" id="numNodes" min="3" max="50" value="8">
+                </div>
+
+                <div class="config-item">
+                    <label>Edge Count Range (per node)</label>
+                    <div class="range-inputs">
+                        <input type="number" id="minEdges" min="1" max="20" value="2" placeholder="Min">
+                        <input type="number" id="maxEdges" min="1" max="20" value="5" placeholder="Max">
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <label>Stay Cost Range</label>
+                    <div class="range-inputs">
+                        <input type="number" id="minStayCost" min="1" max="1000" value="10" placeholder="Min">
+                        <input type="number" id="maxStayCost" min="1" max="1000" value="100" placeholder="Max">
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <label>Movement Cost Range</label>
+                    <div class="range-inputs">
+                        <input type="number" id="minMovementCost" min="1" max="1000" value="5" placeholder="Min">
+                        <input type="number" id="maxMovementCost" min="1" max="1000" value="50" placeholder="Max">
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <label for="numStates">Number of States</label>
+                    <input type="number" id="numStates" min="1" max="100" value="5">
+                </div>
+
+                <button onclick="generateGraph()">Generate Graph</button>
+            </div>
+
+            <h2>State Navigation</h2>
+            <div class="state-navigation">
+                <div class="state-display" id="stateDisplay">State: 0 / 0</div>
+                <input type="range" id="stateSlider" class="state-slider" min="0" max="0" value="0" disabled onchange="selectState(this.value)">
+                <div class="state-buttons">
+                    <button onclick="previousState()" id="prevBtn" disabled>← Previous</button>
+                    <button onclick="nextState()" id="nextBtn" disabled>Next →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <canvas id="canvas"></canvas>
+
+            <div class="legend-container">
+                <div class="legend-item">
+                    <div class="legend-node"></div>
+                    <span>Node (with stay cost)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-edge"></div>
+                    <span>Edge (with movement cost)</span>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h3>State Information</h3>
+                <div class="info-grid" id="infoGrid">
+                    <div class="info-item">
+                        <div class="info-label">Current State</div>
+                        <div class="info-value" id="infoCurrentState">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Total Nodes</div>
+                        <div class="info-value" id="infoNodeCount">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Total Edges</div>
+                        <div class="info-value" id="infoEdgeCount">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Avg Stay Cost</div>
+                        <div class="info-value" id="infoAvgStay">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Avg Movement Cost</div>
+                        <div class="info-value" id="infoAvgMovement">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // GRAPH STATE MODEL SYSTEM
+        // ============================================
+
+        class GraphStateModel {
+            constructor(config) {
+                this.config = config;
+                this.states = [];
+                this.nodes = [];
+                this.edges = [];
+                this.currentStateIndex = 0;
+            }
+
+            // FR-SM-001, FR-SM-003: Generate nodes
+            generateNodes() {
+                this.nodes = [];
+                for (let i = 0; i < this.config.numNodes; i++) {
+                    this.nodes.push({
+                        id: i,
+                        x: Math.random() * 800 + 100,
+                        y: Math.random() * 600 + 100,
+                        stayCosts: [] // Will be filled per state
+                    });
+                }
+            }
+
+            // FR-SM-002, FR-SM-004, FR-SM-005, FR-SM-006: Generate edges
+            generateEdges() {
+                this.edges = [];
+                const adjacencyMatrix = Array(this.config.numNodes)
+                    .fill()
+                    .map(() => Array(this.config.numNodes).fill(false));
+
+                // Assign edge count to each node (FR-SM-004)
+                const edgeCounts = this.nodes.map(() => 
+                    Math.floor(Math.random() * 
+                        (this.config.maxEdges - this.config.minEdges + 1)) + 
+                        this.config.minEdges
+                );
+
+                // Create edges while respecting FR-SM-006 (no duplicate edges)
+                for (let nodeId = 0; nodeId < this.config.numNodes; nodeId++) {
+                    let edgeCount = 0;
+                    const targetCount = edgeCounts[nodeId];
+
+                    while (edgeCount < targetCount) {
+                        const targetNode = Math.floor(Math.random() * this.config.numNodes);
+
+                        if (targetNode !== nodeId && 
+                            !adjacencyMatrix[nodeId][targetNode] && 
+                            !adjacencyMatrix[targetNode][nodeId]) {
+                            
+                            adjacencyMatrix[nodeId][targetNode] = true;
+                            adjacencyMatrix[targetNode][nodeId] = true;
+
+                            this.edges.push({
+                                id: this.edges.length,
+                                from: nodeId,
+                                to: targetNode,
+                                movementCosts: [] // Will be filled per state
+                            });
+
+                            edgeCount++;
+                        }
+                    }
+                }
+            }
+
+            // FR-SM-011, FR-SM-012, FR-SM-013, FR-SM-015: Generate states with costs
+            generateStates() {
+                this.states = [];
+
+                for (let stateIdx = 0; stateIdx < this.config.numStates; stateIdx++) {
+                    const state = {
+                        index: stateIdx,
+                        nodeCosts: [],
+                        edgeCosts: []
+                    };
+
+                    // FR-SM-012, FR-SM-016: Generate stay costs for each node
+                    for (let nodeId = 0; nodeId < this.config.numNodes; nodeId++) {
+                        const stayCost = Math.floor(
+                            Math.random() * 
+                            (this.config.maxStayCost - this.config.minStayCost + 1)
+                        ) + this.config.minStayCost;
+                        state.nodeCosts.push(stayCost);
+                        this.nodes[nodeId].stayCosts[stateIdx] = stayCost;
+                    }
+
+                    // FR-SM-013, FR-SM-017: Generate movement costs for each edge
+                    for (let edgeId = 0; edgeId < this.edges.length; edgeId++) {
+                        const movementCost = Math.floor(
+                            Math.random() * 
+                            (this.config.maxMovementCost - this.config.minMovementCost + 1)
+                        ) + this.config.minMovementCost;
+                        state.edgeCosts.push(movementCost);
+                        this.edges[edgeId].movementCosts[stateIdx] = movementCost;
+                    }
+
+                    this.states.push(state);
+                }
+
+                // FR-SM-014: Topology remains fixed, only costs change
+            }
+
+            generateGraph() {
+                this.generateNodes();
+                this.generateEdges();
+                this.generateStates();
+            }
+
+            getCurrentState() {
+                return this.states[this.currentStateIndex];
+            }
+
+            selectState(index) {
+                if (index >= 0 && index < this.states.length) {
+                    this.currentStateIndex = index;
+                    return true;
+                }
+                return false;
+            }
+
+            nextState() {
+                if (this.currentStateIndex < this.states.length - 1) {
+                    this.currentStateIndex++;
+                    return true;
+                }
+                return false;
+            }
+
+            previousState() {
+                if (this.currentStateIndex > 0) {
+                    this.currentStateIndex--;
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        // ============================================
+        // VISUALIZATION
+        // ============================================
+
+        class GraphVisualizer {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            resizeCanvas() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+            }
+
+            // FR-SM-018, FR-SM-019: Display graph with visual distinction
+            draw(model) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                const state = model.getCurrentState();
+                if (!state) return;
+
+                // Draw edges first (so they appear behind nodes)
+                this.drawEdges(model, state);
+
+                // Draw nodes on top
+                this.drawNodes(model, state);
+            }
+
+            drawNodes(model, state) {
+                const nodeRadius = 20;
+                const colors = [
+                    '#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b',
+                    '#fa709a', '#fee140', '#30b0fe', '#ec4899', '#8b5cf6'
+                ];
+
+                model.nodes.forEach((node, index) => {
+                    const x = node.x;
+                    const y = node.y;
+                    const color = colors[index % colors.length];
+
+                    // Draw node circle (FR-SM-019)
+                    this.ctx.fillStyle = color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, nodeRadius, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    // Draw border
+                    this.ctx.strokeStyle = '#333';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+
+                    // FR-SM-020: Display stay cost
+                    const stayCost = state.nodeCosts[node.id];
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.font = 'bold 14px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(stayCost.toString(), x, y);
+
+                    // Node ID label below
+                    this.ctx.fillStyle = '#333';
+                    this.ctx.font = '11px Arial';
+                    this.ctx.fillText(`N${node.id}`, x, y + nodeRadius + 15);
+                });
+            }
+
+            drawEdges(model, state) {
+                const nodeRadius = 20;
+
+                model.edges.forEach((edge, index) => {
+                    const fromNode = model.nodes[edge.from];
+                    const toNode = model.nodes[edge.to];
+
+                    const dx = toNode.x - fromNode.x;
+                    const dy = toNode.y - fromNode.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // Calculate start and end points on node boundaries
+                    const startX = fromNode.x + (dx / distance) * nodeRadius;
+                    const startY = fromNode.y + (dy / distance) * nodeRadius;
+                    const endX = toNode.x - (dx / distance) * nodeRadius;
+                    const endY = toNode.y - (dy / distance) * nodeRadius;
+
+                    // Draw edge line (FR-SM-019)
+                    this.ctx.strokeStyle = '#999';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(startX, startY);
+                    this.ctx.lineTo(endX, endY);
+                    this.ctx.stroke();
+
+                    // FR-SM-021: Display movement cost
+                    const movementCost = state.edgeCosts[edge.id];
+                    const midX = (startX + endX) / 2;
+                    const midY = (startY + endY) / 2;
+
+                    // Background for cost label
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    this.ctx.font = '12px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    const textWidth = this.ctx.measureText(movementCost.toString()).width;
+                    this.ctx.fillRect(midX - textWidth / 2 - 4, midY - 10, textWidth + 8, 20);
+
+                    // Draw cost text
+                    this.ctx.fillStyle = '#333';
+                    this.ctx.fillText(movementCost.toString(), midX, midY);
+                });
+            }
+        }
+
+        // ============================================
+        // APPLICATION CONTROLLER
+        // ============================================
+
+        let model = null;
+        let visualizer = new GraphVisualizer('canvas');
+
+        function getConfig() {
+            return {
+                numNodes: parseInt(document.getElementById('numNodes').value),
+                minEdges: parseInt(document.getElementById('minEdges').value),
+                maxEdges: parseInt(document.getElementById('maxEdges').value),
+                minStayCost: parseInt(document.getElementById('minStayCost').value),
+                maxStayCost: parseInt(document.getElementById('maxStayCost').value),
+                minMovementCost: parseInt(document.getElementById('minMovementCost').value),
+                maxMovementCost: parseInt(document.getElementById('maxMovementCost').value),
+                numStates: parseInt(document.getElementById('numStates').value)
+            };
+        }
+
+        function validateConfig(config) {
+            const errors = [];
+
+            if (config.numNodes < 3 || config.numNodes > 50) {
+                errors.push('Number of nodes must be between 3 and 50');
+            }
+            if (config.minEdges < 1 || config.minEdges > config.maxEdges) {
+                errors.push('Min edges must be ≥ 1 and ≤ max edges');
+            }
+            if (config.maxEdges < 1 || config.maxEdges > config.numNodes - 1) {
+                errors.push('Max edges must be ≤ number of nodes - 1');
+            }
+            if (config.minStayCost < 1 || config.minStayCost > config.maxStayCost) {
+                errors.push('Min stay cost must be ≥ 1 and ≤ max stay cost');
+            }
+            if (config.minMovementCost < 1 || config.minMovementCost > config.maxMovementCost) {
+                errors.push('Min movement cost must be ≥ 1 and ≤ max movement cost');
+            }
+            if (config.numStates < 1 || config.numStates > 100) {
+                errors.push('Number of states must be between 1 and 100');
+            }
+
+            return errors;
+        }
+
+        function showMessage(message, type = 'error') {
+            const container = document.getElementById('messageContainer');
+            const div = document.createElement('div');
+            div.className = type === 'error' ? 'error-message' : 'success-message';
+            div.textContent = message;
+            container.innerHTML = '';
+            container.appendChild(div);
+
+            setTimeout(() => {
+                if (container.contains(div)) {
+                    div.remove();
+                }
+            }, 4000);
+        }
+
+        function generateGraph() {
+            const config = getConfig();
+            const errors = validateConfig(config);
+
+            if (errors.length > 0) {
+                showMessage(errors.join(' | '), 'error');
+                return;
+            }
+
+            model = new GraphStateModel(config);
+            model.generateGraph();
+
+            updateUI();
+            visualizer.draw(model);
+            showMessage('Graph generated successfully!', 'success');
+        }
+
+        function updateUI() {
+            if (!model || model.states.length === 0) return;
+
+            const totalStates = model.states.length;
+            const currentState = model.currentStateIndex;
+            const state = model.getCurrentState();
+
+            // Update state display
+            document.getElementById('stateDisplay').textContent = 
+                `State: ${currentState + 1} / ${totalStates}`;
+            document.getElementById('infoCurrentState').textContent = 
+                `${currentState + 1} / ${totalStates}`;
+
+            // Update slider
+            const slider = document.getElementById('stateSlider');
+            slider.max = totalStates - 1;
+            slider.value = currentState;
+            slider.disabled = totalStates <= 1;
+
+            // Update buttons
+            document.getElementById('prevBtn').disabled = currentState === 0;
+            document.getElementById('nextBtn').disabled = currentState === totalStates - 1;
+
+            // Calculate and display statistics
+            document.getElementById('infoNodeCount').textContent = model.nodes.length;
+            document.getElementById('infoEdgeCount').textContent = model.edges.length;
+
+            const avgStay = (state.nodeCosts.reduce((a, b) => a + b, 0) / state.nodeCosts.length).toFixed(1);
+            document.getElementById('infoAvgStay').textContent = avgStay;
+
+            const avgMovement = model.edges.length > 0
+                ? (state.edgeCosts.reduce((a, b) => a + b, 0) / state.edgeCosts.length).toFixed(1)
+                : '-';
+            document.getElementById('infoAvgMovement').textContent = avgMovement;
+
+            visualizer.draw(model);
+        }
+
+        // FR-SM-022: Navigate between states
+        function selectState(value) {
+            if (model && model.selectState(parseInt(value))) {
+                updateUI();
+            }
+        }
+
+        function nextState() {
+            if (model && model.nextState()) {
+                updateUI();
+            }
+        }
+
+        function previousState() {
+            if (model && model.previousState()) {
+                updateUI();
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            visualizer.resizeCanvas();
+        });
+    </script>
+</body>
+</html>

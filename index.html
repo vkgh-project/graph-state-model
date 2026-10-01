@@ -274,24 +274,6 @@
             }
         }
 
-        .node-legend {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            padding: 6px;
-            background: white;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-
-        .node-legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #667eea;
-        }
-
         .legend-container {
             display: flex;
             gap: 15px;
@@ -444,54 +426,79 @@
                         id: i,
                         x: Math.random() * 800 + 100,
                         y: Math.random() * 600 + 100,
-                        stayCosts: []
+                        stayCosts: [],
+                        degree: 0 // Track actual edge count for this node
                     });
                 }
             }
 
-            // FR-SM-002, FR-SM-004, FR-SM-005, FR-SM-006: Generate edges with timeout protection
+            // FR-SM-002, FR-SM-004, FR-SM-005, FR-SM-006: Generate edges
+            // Correctly enforces edge limits per node in undirected graph
             generateEdges() {
                 this.edges = [];
                 const adjacencyMatrix = Array(this.config.numNodes)
                     .fill()
                     .map(() => Array(this.config.numNodes).fill(false));
 
-                // Maximum possible edges: (n * (n-1)) / 2 for undirected graph
-                const maxPossibleEdges = (this.config.numNodes * (this.config.numNodes - 1)) / 2;
-
-                // Generate edge counts for each node
-                const edgeCounts = this.nodes.map(() => 
+                // Assign target edge count for each node
+                const targetEdgeCounts = this.nodes.map(() => 
                     Math.floor(Math.random() * 
                         (this.config.maxEdges - this.config.minEdges + 1)) + 
                         this.config.minEdges
                 );
 
-                // Create edges with maximum attempts to prevent infinite loops
+                // Create edges using a greedy approach that respects degree constraints
+                // Process nodes in order and try to connect them
                 for (let nodeId = 0; nodeId < this.config.numNodes; nodeId++) {
-                    let edgeCount = 0;
-                    const targetCount = edgeCounts[nodeId];
-                    let attempts = 0;
-                    const maxAttempts = 1000; // Prevent infinite loops
+                    const currentDegree = this.nodes[nodeId].degree;
+                    const targetDegree = targetEdgeCounts[nodeId];
+                    const neededEdges = targetDegree - currentDegree;
 
-                    while (edgeCount < targetCount && attempts < maxAttempts) {
-                        const targetNode = Math.floor(Math.random() * this.config.numNodes);
-                        attempts++;
+                    if (neededEdges <= 0) continue;
 
-                        if (targetNode !== nodeId && 
-                            !adjacencyMatrix[nodeId][targetNode] && 
-                            !adjacencyMatrix[targetNode][nodeId]) {
+                    // Try to connect to other nodes
+                    const candidates = [];
+                    for (let targetId = 0; targetId < this.config.numNodes; targetId++) {
+                        if (targetId === nodeId) continue;
+                        if (adjacencyMatrix[nodeId][targetId]) continue; // Already connected
+                        
+                        const targetDegree = targetEdgeCounts[targetId];
+                        const targetCurrentDegree = this.nodes[targetId].degree;
+                        
+                        // Only connect if target node hasn't reached its limit
+                        if (targetCurrentDegree < targetDegree) {
+                            candidates.push(targetId);
+                        }
+                    }
+
+                    // Shuffle candidates for randomness
+                    for (let i = candidates.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+                    }
+
+                    // Connect to candidates up to needed edges
+                    let edgesAdded = 0;
+                    for (let candidate of candidates) {
+                        if (edgesAdded >= neededEdges) break;
+
+                        // Final check: both nodes must have room
+                        if (this.nodes[nodeId].degree < targetEdgeCounts[nodeId] &&
+                            this.nodes[candidate].degree < targetEdgeCounts[candidate]) {
                             
-                            adjacencyMatrix[nodeId][targetNode] = true;
-                            adjacencyMatrix[targetNode][nodeId] = true;
+                            adjacencyMatrix[nodeId][candidate] = true;
+                            adjacencyMatrix[candidate][nodeId] = true;
 
                             this.edges.push({
                                 id: this.edges.length,
                                 from: nodeId,
-                                to: targetNode,
+                                to: candidate,
                                 movementCosts: []
                             });
 
-                            edgeCount++;
+                            this.nodes[nodeId].degree++;
+                            this.nodes[candidate].degree++;
+                            edgesAdded++;
                         }
                     }
                 }
